@@ -1,11 +1,11 @@
 // Import thư viện bâm mã (dùng để mã hóa mật khẩu)
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
 // Import thư viện tạo ID ngẫu nhiên không trùng lặp (UUID)
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require("uuid");
 // Kết nối DB
-const pool = require('../config/db');
+const pool = require("../config/db");
 // Tiện ích ký mã token JWT để xác thực user
-const { signAccessToken } = require('../utils/jwt');
+const { signAccessToken } = require("../utils/jwt");
 
 // ID mặc định cho vai trò USER (khách hàng bình thường)
 const USER_ROLE_ID = 3;
@@ -21,7 +21,7 @@ const getUserByUsername = async (username) => {
       WHERE u.username = ?
       LIMIT 1
     `,
-    [username]
+    [username],
   );
   return rows[0] || null;
 };
@@ -37,7 +37,7 @@ const getUserByEmail = async (email) => {
       WHERE u.email = ?
       LIMIT 1
     `,
-    [email]
+    [email],
   );
   return rows[0] || null;
 };
@@ -53,7 +53,7 @@ const getUserById = async (userId) => {
       WHERE u.user_id = ?
       LIMIT 1
     `,
-    [userId]
+    [userId],
   );
   return rows[0] || null;
 };
@@ -65,13 +65,21 @@ const register = async (payload) => {
   // 1. Kiểm tra tài khoản đã trùng lặp chưa
   const existingUsername = await getUserByUsername(username);
   if (existingUsername) {
-    throw { status: 409, message: 'Username đã tồn tại', errors: ['username already exists'] };
+    throw {
+      status: 409,
+      message: "Username đã tồn tại",
+      errors: ["username already exists"],
+    };
   }
 
   // 2. Kiểm tra email bị trùng chưa
   const existingEmail = await getUserByEmail(email);
   if (existingEmail) {
-    throw { status: 409, message: 'Email đã tồn tại', errors: ['email already exists'] };
+    throw {
+      status: 409,
+      message: "Email đã tồn tại",
+      errors: ["email already exists"],
+    };
   }
 
   // 3. Tạo ID và mã hóa mật khẩu trước khi lưu
@@ -85,7 +93,17 @@ const register = async (payload) => {
       (user_id, username, password, full_name, email, phone, address, role_id, is_active)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
-    [userId, username.trim(), hashedPassword, fullName.trim(), email.trim(), phone || null, address || null, USER_ROLE_ID, 1]
+    [
+      userId,
+      username.trim(),
+      hashedPassword,
+      fullName.trim(),
+      email.trim(),
+      phone || null,
+      address || null,
+      USER_ROLE_ID,
+      1,
+    ],
   );
 
   return await getUserById(userId);
@@ -93,23 +111,41 @@ const register = async (payload) => {
 
 // Core logic: Xác thực đăng nhập
 const login = async (payload) => {
-  const { username, password } = payload;
+  const { username, email, password } = payload;
 
-  // 1. Kiểm tra xem user tồn tại không
-  const user = await getUserByUsername(username);
+  // 1. Kiểm tra xem user tồn tại không - support email hoặc username
+  let user;
+  if (email) {
+    user = await getUserByEmail(email);
+  } else if (username) {
+    user = await getUserByUsername(username);
+  }
+
   if (!user) {
-    throw { status: 401, message: 'Sai tài khoản hoặc mật khẩu', errors: ['invalid credentials'] };
+    throw {
+      status: 401,
+      message: "Sai tài khoản hoặc mật khẩu",
+      errors: ["invalid credentials"],
+    };
   }
 
   // 2. Chặn nếu tài khoản bị khoá
   if (!user.is_active) {
-    throw { status: 403, message: 'Tài khoản đã bị khóa', errors: ['account inactive'] };
+    throw {
+      status: 403,
+      message: "Tài khoản đã bị khóa",
+      errors: ["account inactive"],
+    };
   }
 
   // 3. So khớp hash password với chuỗi nguyên bản
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    throw { status: 401, message: 'Sai tài khoản hoặc mật khẩu', errors: ['invalid credentials'] };
+    throw {
+      status: 401,
+      message: "Sai tài khoản hoặc mật khẩu",
+      errors: ["invalid credentials"],
+    };
   }
 
   // 4. Tạo Object chứa thông tin cần lưu trong token
@@ -117,7 +153,7 @@ const login = async (payload) => {
     userId: user.user_id,
     username: user.username,
     roleId: user.role_id,
-    roleName: user.role_name
+    roleName: user.role_name,
   });
 
   // Trả về token kèm cục thông tin chi tiết user
@@ -131,14 +167,14 @@ const login = async (payload) => {
       phone: user.phone,
       address: user.address,
       role_id: user.role_id,
-      role_name: user.role_name
-    }
+      role_name: user.role_name,
+    },
   };
 };
 
 // Logic: Đăng xuất (chủ yếu thao tác bên FE xoá token do dùng JWT stateless, bên này chỉ trả về text)
 const logout = async () => {
-  return { message: 'Đăng xuất thành công' };
+  return { message: "Đăng xuất thành công" };
 };
 
 // Logic: Yêu cầu lấy mật khẩu qua Email (tạo OTP)
@@ -146,12 +182,18 @@ const forgotPasswordRequest = async ({ email }) => {
   // Tìm email có trong hệ thống không
   const user = await getUserByEmail(email);
   if (!user) {
-    throw { status: 404, message: 'Không tìm thấy tài khoản với email này', errors: ['email not found'] };
+    throw {
+      status: 404,
+      message: "Không tìm thấy tài khoản với email này",
+      errors: ["email not found"],
+    };
   }
 
   // Tạo code 6 số random
   const code = String(Math.floor(100000 + Math.random() * 900000));
-  const expiresMinutes = Number(process.env.FORGOT_PASSWORD_EXPIRES_MINUTES || 15);
+  const expiresMinutes = Number(
+    process.env.FORGOT_PASSWORD_EXPIRES_MINUTES || 15,
+  );
 
   // Xoá mã code cũ (nếu có) trước khi tạo mã mới cho user này
   await pool.query(`DELETE FROM forgot_pass WHERE id_user = ?`, [user.user_id]);
@@ -162,32 +204,47 @@ const forgotPasswordRequest = async ({ email }) => {
       INSERT INTO forgot_pass (id_user, create_at, expired_at, code_confirm)
       VALUES (?, NOW(), DATE_ADD(NOW(), INTERVAL ? MINUTE), ?)
     `,
-    [user.user_id, expiresMinutes, code]
+    [user.user_id, expiresMinutes, code],
   );
 
-  return { email: user.email, code_confirm: code, note: 'Local test: tạm trả code về để test. Server thật thì sẽ gọi hàm gửi SMS / Email thay vì hiện mã code ra đây' };
+  return {
+    email: user.email,
+    code_confirm: code,
+    note: "Local test: tạm trả code về để test. Server thật thì sẽ gọi hàm gửi SMS / Email thay vì hiện mã code ra đây",
+  };
 };
 
 // Logic: Reset password theo mã OTP
 const forgotPasswordReset = async ({ email, code, newPassword }) => {
   const user = await getUserByEmail(email);
   if (!user) {
-    throw { status: 404, message: 'Không tìm thấy tài khoản', errors: ['email not found'] };
+    throw {
+      status: 404,
+      message: "Không tìm thấy tài khoản",
+      errors: ["email not found"],
+    };
   }
 
   // Lấy dòng kiểm tra OTP và xem mã còn hạn sử dụng không
   const [rows] = await pool.query(
     `SELECT * FROM forgot_pass WHERE id_user = ? AND code_confirm = ? AND expired_at >= NOW() ORDER BY create_at DESC LIMIT 1`,
-    [user.user_id, String(code)]
+    [user.user_id, String(code)],
   );
 
   if (!rows[0]) {
-    throw { status: 400, message: 'Mã xác nhận không đúng hoặc đã hết hạn', errors: ['invalid code'] };
+    throw {
+      status: 400,
+      message: "Mã xác nhận không đúng hoặc đã hết hạn",
+      errors: ["invalid code"],
+    };
   }
 
   // Đổi mật khẩu thành công: Tạo hash và cập nhật
   const hashedPassword = await bcrypt.hash(newPassword, 10);
-  await pool.query(`UPDATE users SET password = ? WHERE user_id = ?`, [hashedPassword, user.user_id]);
+  await pool.query(`UPDATE users SET password = ? WHERE user_id = ?`, [
+    hashedPassword,
+    user.user_id,
+  ]);
 
   // Xoá OTP đó đi
   await pool.query(`DELETE FROM forgot_pass WHERE id_user = ?`, [user.user_id]);
@@ -197,21 +254,35 @@ const forgotPasswordReset = async ({ email, code, newPassword }) => {
 
 // Logic: Tự đổi password (cần biết pass cũ)
 const changePassword = async ({ userId, oldPassword, newPassword }) => {
-  const [rows] = await pool.query(`SELECT user_id, password FROM users WHERE user_id = ? LIMIT 1`, [userId]);
+  const [rows] = await pool.query(
+    `SELECT user_id, password FROM users WHERE user_id = ? LIMIT 1`,
+    [userId],
+  );
   const user = rows[0];
 
   if (!user) {
-    throw { status: 404, message: 'Không tìm thấy người dùng', errors: ['user not found'] };
+    throw {
+      status: 404,
+      message: "Không tìm thấy người dùng",
+      errors: ["user not found"],
+    };
   }
 
   // Bắt buộc xác thực mật khẩu cũ
   const isMatch = await bcrypt.compare(oldPassword, user.password);
   if (!isMatch) {
-    throw { status: 400, message: 'Mật khẩu cũ không đúng', errors: ['old password incorrect'] };
+    throw {
+      status: 400,
+      message: "Mật khẩu cũ không đúng",
+      errors: ["old password incorrect"],
+    };
   }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
-  await pool.query(`UPDATE users SET password = ? WHERE user_id = ?`, [hashedPassword, userId]);
+  await pool.query(`UPDATE users SET password = ? WHERE user_id = ?`, [
+    hashedPassword,
+    userId,
+  ]);
 
   return { user_id: userId };
 };
@@ -219,20 +290,24 @@ const changePassword = async ({ userId, oldPassword, newPassword }) => {
 // Logic: Cập nhật thông tin hồ sơ
 const updateProfile = async (userId, payload) => {
   const { full_name, email, phone, address } = payload;
-  
+
   // Nếu có đổi email, check xem email đã có ai dùng chưa
   if (email) {
     const existing = await getUserByEmail(email);
     // Nếu có email nhưng ID ko phải của ông hiện tại (tức là 1 ô khác giữ email này rồi)
     if (existing && existing.user_id !== userId) {
-      throw { status: 409, message: 'Email đã được sử dụng bởi tài khoản khác', errors: ['email exists'] };
+      throw {
+        status: 409,
+        message: "Email đã được sử dụng bởi tài khoản khác",
+        errors: ["email exists"],
+      };
     }
   }
 
   // Áp dụng đổi thông tin
   await pool.query(
     `UPDATE users SET full_name = ?, email = ?, phone = ?, address = ? WHERE user_id = ?`,
-    [full_name || null, email || null, phone || null, address || null, userId]
+    [full_name || null, email || null, phone || null, address || null, userId],
   );
   return await getUserById(userId);
 };
@@ -245,5 +320,5 @@ module.exports = {
   forgotPasswordReset,
   changePassword,
   updateProfile,
-  getUserById
+  getUserById,
 };
