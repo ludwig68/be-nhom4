@@ -1,17 +1,28 @@
-// Import thư viện express
-const express = require('express');
+/**
+ * =============================================================
+ * FILE: backend/src/routes/branch.routes.js
+ * MÔ TẢ: Định nghĩa route cho module Chi nhánh
+ * 
+ * PREFIX: /api/branches
+ * 
+ * API:
+ * - GET /api/branches       → Danh sách chi nhánh (public)
+ * - GET /api/branches/:id   → Chi tiết chi nhánh (public)
+ * 
+ * KHÔNG CẦN ĐĂNG NHẬP: ai cũng có thể xem chi nhánh
+ * =============================================================
+ */
 
-// Import controller điều khiển logic xử lý chi nhánh
+const express = require('express');
 const branchController = require('../controllers/branch.controller');
 
-// Khởi tạo module Router 
 const router = express.Router();
 
-// Định nghĩa route GET '/' lấy danh sách tất cả các chi nhánh
+// GET /api/branches  →  Danh sách tất cả chi nhánh đang hoạt động
 router.get('/', branchController.getAllBranches);
 
-// Định nghĩa route GET '/:id' để lấy thông tin chi tiết của 1 chi nhánh (dựa vào id)
+// GET /api/branches/:id  →  Chi tiết chi nhánh theo ID
+// :id là route parameter, ví dụ: /api/branches/1 → req.params.id = '1'
 router.get('/:id', branchController.getBranchById);
 
-// Xuất router để sử dụng ở app.js
 module.exports = router;
