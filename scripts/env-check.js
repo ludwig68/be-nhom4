@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('../src/utils/load-env')()
 
 const { REQUIRED_ENV_KEYS, validateRequiredEnv } = require('../src/utils/env')
 

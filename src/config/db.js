@@ -22,7 +22,26 @@
 
 // Import module mysql2 phiên bản Promise (hỗ trợ async/await)
 // Phiên bản callback là 'mysql2' (không có /promise)
+const fs = require('fs');
 const mysql = require('mysql2/promise');
+
+const isTruthy = (value = '') => ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
+
+const buildSslConfig = () => {
+  if (!isTruthy(process.env.DB_SSL)) {
+    return undefined;
+  }
+
+  const sslConfig = {
+    rejectUnauthorized: isTruthy(process.env.DB_SSL_REJECT_UNAUTHORIZED)
+  };
+
+  if (process.env.DB_SSL_CA_PATH) {
+    sslConfig.ca = fs.readFileSync(process.env.DB_SSL_CA_PATH, 'utf8');
+  }
+
+  return sslConfig;
+};
 
 // Tạo connection pool - nhóm kết nối được quản lý tự động
 const pool = mysql.createPool({
@@ -41,6 +60,10 @@ const pool = mysql.createPool({
   
   // Tên database cần kết nối
   database: process.env.DB_NAME,
+
+  // Aiven/MySQL cloud thường yêu cầu SSL.
+  // Nếu có DB_SSL=true thì bật TLS, có thể kèm CA file để verify chứng chỉ.
+  ssl: buildSslConfig(),
   
   // Nếu pool đã đạt connectionLimit, request mới sẽ chờ
   // thay vì báo lỗi "no connections available"
