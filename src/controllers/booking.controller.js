@@ -8,6 +8,10 @@
  * - GET    /api/bookings/services          → Danh sách dịch vụ kèm theo
  * - POST   /api/bookings/quote             → Tính tổng tiền đặt phòng
  * - POST   /api/bookings                   → Tạo đơn đặt phòng (cần login)
+ * - GET    /api/bookings/my-bookings       → Lịch sử đặt phòng của user (cần login)
+ * - GET    /api/bookings/:id               → Chi tiết booking (cần login)
+ * - POST   /api/bookings/:id/confirm       → Xác nhận đơn (cần staff/admin)
+ * - POST   /api/bookings/:id/cancel        → Hủy đơn (cần login)
  * =============================================================
  */
 
@@ -27,33 +31,18 @@ const {
 /**
  * API: TÌM PHÒNG TRỐNG THEO NGÀY VÀ BỘ LỌC
  * GET /api/bookings/available-rooms
- * Query params: checkIn, checkOut, branchId, typeId, capacity, minPrice, maxPrice, amenityIds
- * 
- * Không cần đăng nhập (public) - ai cũng có thể tìm phòng
  */
 const getAvailableRooms = async (req, res) => {
   try {
-    // Bước 1: Validate query parameters (checkIn/checkOut format, giá trị hợp lệ)
     const errors = validateAvailableRoomsQuery(req.query);
     if (errors.length) {
       return errorResponse(res, 'Dữ liệu không hợp lệ', errors, 400);
     }
 
-    // Bước 2: Normalize (chuẩn hóa) dữ liệu: ép kiểu, trim, ...
     const filters = normalizeAvailableRoomsQuery(req.query);
-
-    // Debug log: xem filters gửi lên là gì (xóa khi production)
-    console.log('[DEBUG] getAvailableRooms filters:', JSON.stringify(filters));
-
-    // Bước 3: Gọi service query database
     const rooms = await bookingService.getAvailableRooms(filters);
-
-    // Debug log: xem kết quả trả về bao nhiêu phòng
-    console.log('[DEBUG] getAvailableRooms result count:', rooms.length);
-
     return successResponse(res, 'Lấy danh sách phòng trống thành công', rooms);
   } catch (error) {
-    console.error('[ERROR] getAvailableRooms:', error.message);
     return errorResponse(res, error.message || 'Lỗi lấy phòng trống', error.errors || [], error.status || 500);
   }
 };
@@ -61,9 +50,6 @@ const getAvailableRooms = async (req, res) => {
 /**
  * API: LẤY DANH SÁCH DỊCH VỤ KÈM THEO
  * GET /api/bookings/services
- * 
- * Trả về: Ăn sáng, Bữa tối, Massage + giá mỗi dịch vụ
- * Không cần đăng nhập (public)
  */
 const getServiceCatalog = async (req, res) => {
   try {
@@ -77,31 +63,16 @@ const getServiceCatalog = async (req, res) => {
 /**
  * API: TÍNH TỔNG TIỀN ĐẶT PHÒNG (QUOTE)
  * POST /api/bookings/quote
- * Body: { roomId, checkIn, checkOut, serviceIds[] }
- * 
- * Không cần đăng nhập (public) - khách có thể tính giá trước khi đặt
- * 
- * Luồng xử lý:
- * 1. Kiểm tra phòng có tồn tại không
- * 2. Kiểm tra phòng có trống trong khoảng thời gian không
- * 3. Tính số đêm × giá phòng
- * 4. Tính tổng giá dịch vụ
- * 5. Trả về báo giá chi tiết
  */
 const quoteBooking = async (req, res) => {
   try {
-    // Bước 1: Validate dữ liệu
     const errors = validateBookingQuotePayload(req.body);
     if (errors.length) {
       return errorResponse(res, 'Dữ liệu không hợp lệ', errors, 400);
     }
 
-    // Bước 2: Normalize dữ liệu
     const payload = normalizeBookingQuotePayload(req.body);
-
-    // Bước 3: Gọi service tính toán
     const quote = await bookingService.buildBookingQuote(payload);
-
     return successResponse(res, 'Tính tổng tiền thành công', quote);
   } catch (error) {
     return errorResponse(res, error.message || 'Lỗi tính tổng tiền', error.errors || [], error.status || 500);
@@ -111,53 +82,171 @@ const quoteBooking = async (req, res) => {
 /**
  * API: TẠO ĐƠN ĐẶT PHÒNG
  * POST /api/bookings
- * Cần đăng nhập (authMiddleware)
- * 
- * Body: {
- *   roomId, checkIn, checkOut, serviceIds[],
- *   customerName, customerPhone, customerEmail, note
- * }
- * 
- * LUỒNG XỬ LÝ:
- * 1. Validate dữ liệu đầu vào
- * 2. Tính quote (kiểm tra phòng trống + tính giá)
- * 3. Mở DB transaction (atomic)
- * 4. Kiểm tra lại phòng trống (chống double-booking)
- * 5. Tìm staff xác nhận (hoặc fallback sang customer)
- * 6. Tạo booking code ngẫu nhiên
- * 7. INSERT bookings
- * 8. INSERT booking_details (gán phòng)
- * 9. INSERT booking_services (dịch vụ kèm theo)
- * 10. COMMIT transaction
- * 
- * Transaction là gì?
- * - Nhóm nhiều câu lệnh SQL thành 1 khối nguyên tử (atomic)
- * - Tất cả thành công → COMMIT (lưu vĩnh viễn)
- * - Có lỗi → ROLLBACK (hoàn tác tất cả)
- * - Tránh trường hợp: INSERT booking nhưng KHÔNG INSERT booking_details
  */
 const createBooking = async (req, res) => {
   try {
-    // Bước 1: Validate
     const errors = validateCreateBookingPayload(req.body);
     if (errors.length) {
       return errorResponse(res, 'Dữ liệu không hợp lệ', errors, 400);
     }
 
-    // Bước 2: Normalize
     const payload = normalizeCreateBookingPayload(req.body);
-
-    // Bước 3: Gọi service tạo booking
-    // req.user.userId: ID user đang đăng nhập (từ JWT token)
     const booking = await bookingService.createBooking({
       payload,
       userId: req.user.userId
     });
 
-    // 201 Created: resource mới được tạo
     return successResponse(res, 'Đặt phòng thành công', booking, 201);
   } catch (error) {
     return errorResponse(res, error.message || 'Lỗi đặt phòng', error.errors || [], error.status || 500);
+  }
+};
+
+// =============================================================
+// CÁC API MỚI: Lịch sử, Chi tiết, Xác nhận, Hủy
+// =============================================================
+
+/**
+ * API: LỊCH SỬ ĐẶT PHÒNG CỦA USER
+ * GET /api/bookings/my-bookings
+ * Query: status (optional) - lọc theo trạng thái
+ * 
+ * Cần đăng nhập
+ */
+const getMyBookings = async (req, res) => {
+  try {
+    const status = req.query.status || null;
+    const bookings = await bookingService.getBookingList({
+      userId: req.user.userId,
+      status
+    });
+    return successResponse(res, 'Lấy lịch sử đặt phòng thành công', bookings);
+  } catch (error) {
+    return errorResponse(res, error.message || 'Lỗi lấy lịch sử đặt phòng', error.errors || [], error.status || 500);
+  }
+};
+
+/**
+ * API: CHI TIẾT BOOKING
+ * GET /api/bookings/:id
+ * 
+ * Cần đăng nhập
+ * - USER: chỉ xem booking của mình
+ * - STAFF/ADMIN: xem được mọi booking
+ */
+const getBookingDetail = async (req, res) => {
+  try {
+    const bookingId = req.params.id; // Có thể là bookingId (số) hoặc bookingCode (string)
+    const detail = await bookingService.getBookingDetail(
+      bookingId,
+      req.user.userId,
+      req.user.roleName
+    );
+
+    if (!detail) {
+      return errorResponse(res, 'Không tìm thấy đơn đặt phòng', [], 404);
+    }
+
+    return successResponse(res, 'Lấy chi tiết đơn đặt phòng thành công', detail);
+  } catch (error) {
+    return errorResponse(res, error.message || 'Lỗi lấy chi tiết đơn', error.errors || [], error.status || 500);
+  }
+};
+
+/**
+ * API: XÁC NHẬN ĐƠN ĐẶT PHÒNG
+ * POST /api/bookings/:id/confirm
+ * 
+ * Cần đăng nhập + role STAFF hoặc ADMIN
+ */
+const confirmBooking = async (req, res) => {
+  try {
+    const bookingId = Number(req.params.id);
+
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return errorResponse(res, 'ID đơn đặt phòng không hợp lệ', ['bookingId phải là số nguyên dương'], 400);
+    }
+
+    const result = await bookingService.confirmBooking({
+      bookingId,
+      staffUserId: req.user.userId
+    });
+
+    return successResponse(res, result.message, result);
+  } catch (error) {
+    return errorResponse(res, error.message || 'Lỗi xác nhận đơn', error.errors || [], error.status || 500);
+  }
+};
+
+/**
+ * API: HỦY ĐƠN ĐẶT PHÒNG
+ * POST /api/bookings/:id/cancel
+ */
+const cancelBooking = async (req, res) => {
+  try {
+    const bookingId = Number(req.params.id);
+
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return errorResponse(res, 'ID đơn đặt phòng không hợp lệ', ['bookingId phải là số nguyên dương'], 400);
+    }
+
+    const result = await bookingService.cancelBooking({
+      bookingId,
+      userId: req.user.userId,
+      userRole: req.user.roleName
+    });
+
+    return successResponse(res, result.message, result);
+  } catch (error) {
+    return errorResponse(res, error.message || 'Lỗi hủy đơn', error.errors || [], error.status || 500);
+  }
+};
+
+/**
+ * API: CHECK-IN (nhân viên)
+ * POST /api/bookings/:id/check-in
+ * Cần đăng nhập + role STAFF hoặc ADMIN
+ */
+const checkInBooking = async (req, res) => {
+  try {
+    const bookingId = Number(req.params.id);
+
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return errorResponse(res, 'ID đơn đặt phòng không hợp lệ', ['bookingId phải là số nguyên dương'], 400);
+    }
+
+    const result = await bookingService.checkInBooking({
+      bookingId,
+      staffUserId: req.user.userId
+    });
+
+    return successResponse(res, result.message, result);
+  } catch (error) {
+    return errorResponse(res, error.message || 'Lỗi check-in', error.errors || [], error.status || 500);
+  }
+};
+
+/**
+ * API: CHECK-OUT (nhân viên)
+ * POST /api/bookings/:id/check-out
+ * Cần đăng nhập + role STAFF hoặc ADMIN
+ */
+const checkOutBooking = async (req, res) => {
+  try {
+    const bookingId = Number(req.params.id);
+
+    if (!Number.isInteger(bookingId) || bookingId <= 0) {
+      return errorResponse(res, 'ID đơn đặt phòng không hợp lệ', ['bookingId phải là số nguyên dương'], 400);
+    }
+
+    const result = await bookingService.checkOutBooking({
+      bookingId,
+      staffUserId: req.user.userId
+    });
+
+    return successResponse(res, result.message, result);
+  } catch (error) {
+    return errorResponse(res, error.message || 'Lỗi check-out', error.errors || [], error.status || 500);
   }
 };
 
@@ -165,5 +254,12 @@ module.exports = {
   getAvailableRooms,
   getServiceCatalog,
   quoteBooking,
-  createBooking
+  createBooking,
+  getMyBookings,
+  getBookingDetail,
+  confirmBooking,
+  cancelBooking,
+  // Mới: check-in / check-out
+  checkInBooking,
+  checkOutBooking
 };

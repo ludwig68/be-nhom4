@@ -25,6 +25,7 @@ const authRoutes = require('./routes/auth.routes');       // Đăng ký, đăng 
 const branchRoutes = require('./routes/branch.routes');   // Danh sách chi nhánh
 const roomRoutes = require('./routes/room.routes');       // Quản lý phòng
 const bookingRoutes = require('./routes/booking.routes'); // Đặt phòng
+const feedbackRoutes = require('./routes/feedback.routes'); // Đánh giá
 
 // Khởi tạo ứng dụng Express
 const app = express();
@@ -62,6 +63,7 @@ app.get('/', (req, res) => {
         'POST /api/auth/forgot-password/reset',
         'POST /api/auth/change-password',
         'GET /api/auth/me',
+        'PUT /api/auth/profile',
         // Branch endpoints
         'GET /api/branches',
         'GET /api/branches/:id',
@@ -76,7 +78,20 @@ app.get('/', (req, res) => {
         'GET /api/bookings/available-rooms',
         'GET /api/bookings/services',
         'POST /api/bookings/quote',
-        'POST /api/bookings'
+        'POST /api/bookings',
+        'GET /api/bookings/my-bookings',
+        'GET /api/bookings/:id',
+        'POST /api/bookings/:id/confirm',
+        'POST /api/bookings/:id/cancel',
+        'POST /api/bookings/:id/check-in',
+        'POST /api/bookings/:id/check-out',
+        // Feedback endpoints
+        'POST /api/feedbacks',
+        'GET /api/feedbacks/my-feedbacks',
+        'GET /api/feedbacks/eligible',
+        'GET /api/feedbacks/:id',
+        'PUT /api/feedbacks/:id',
+        'DELETE /api/feedbacks/:id'
       ]
     }
   });
@@ -99,6 +114,9 @@ app.use('/api/rooms', roomRoutes);
 
 // Tất cả API liên quan đến đặt phòng → prefix /api/bookings
 app.use('/api/bookings', bookingRoutes);
+
+// Tất cả API liên quan đến đánh giá → prefix /api/feedbacks
+app.use('/api/feedbacks', feedbackRoutes);
 
 // Xuất đối tượng app để server.js có thể import và khởi động server
 module.exports = app;

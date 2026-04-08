@@ -11,7 +11,15 @@
  * - POST /api/bookings/quote            → Tính giá
  * 
  * API PRIVATE (cần đăng nhập):
- * - POST /api/bookings  →  Tạo đơn đặt phòng
+ * - POST   /api/bookings                → Tạo đơn đặt phòng
+ * - GET    /api/bookings/my-bookings    → Lịch sử đặt phòng
+ * - GET    /api/bookings/:id            → Chi tiết booking
+ * - POST   /api/bookings/:id/confirm    → Xác nhận đơn (staff/admin)
+ * - POST   /api/bookings/:id/cancel     → Hủy đơn
+ * 
+ * LƯU Ý VỀ THỨ TỰ ROUTE:
+ * - Route '/:id/confirm' và '/:id/cancel' PHẢI đặt TRƯỚC '/:id'
+ * - Nếu không, Express sẽ hiểu 'confirm' và 'cancel' là :id
  * =============================================================
  */
 
@@ -25,24 +33,44 @@ const router = express.Router();
 // ROUTES PUBLIC
 // =============================================================
 
-// GET /api/bookings/available-rooms  →  Tìm phòng trống theo ngày + bộ lọc
-// Query: checkIn, checkOut, branchId, typeId, capacity, minPrice, maxPrice, amenityIds
+// GET /api/bookings/available-rooms
 router.get('/available-rooms', bookingController.getAvailableRooms);
 
-// GET /api/bookings/services  →  Danh sách dịch vụ kèm theo (ăn sáng, massage, ...)
+// GET /api/bookings/services
 router.get('/services', bookingController.getServiceCatalog);
 
-// POST /api/bookings/quote  →  Tính tổng tiền đặt phòng
-// Body: { roomId, checkIn, checkOut, serviceIds[] }
+// POST /api/bookings/quote
 router.post('/quote', bookingController.quoteBooking);
 
 // =============================================================
 // ROUTES PRIVATE
 // =============================================================
 
+// GET /api/bookings/my-bookings  →  Lịch sử đặt phòng của user
+router.get('/my-bookings', authMiddleware, bookingController.getMyBookings);
+
+// POST /api/bookings/:id/confirm  →  Xác nhận đơn (staff/admin)
+// ⚠️ PHẢI đặt TRƯỚC '/:id' để Express không nhầm 'confirm' là :id
+router.post('/:id/confirm', authMiddleware, bookingController.confirmBooking);
+
+// POST /api/bookings/:id/cancel  →  Hủy đơn
+// ⚠️ PHẢI đặt TRƯỚC '/:id'
+router.post('/:id/cancel', authMiddleware, bookingController.cancelBooking);
+
+// POST /api/bookings/:id/check-in  →  Check-in (staff/admin)
+// ⚠️ PHẢI đặt TRƯỚC '/:id'
+router.post('/:id/check-in', authMiddleware, bookingController.checkInBooking);
+
+// POST /api/bookings/:id/check-out  →  Check-out (staff/admin)
+// ⚠️ PHẢI đặt TRƯỚC '/:id'
+router.post('/:id/check-out', authMiddleware, bookingController.checkOutBooking);
+
+// GET /api/bookings/:id  →  Chi tiết booking
+// Đặt SAU các route cụ thể như /:id/confirm, /:id/cancel
+router.get('/:id', authMiddleware, bookingController.getBookingDetail);
+
 // POST /api/bookings  →  Tạo đơn đặt phòng
-// Cần đăng nhập (để biết ai đặt phòng)
-// Body: { roomId, checkIn, checkOut, serviceIds[], customerName, customerPhone, customerEmail, note }
+// ⚠️ PHẢI đặt SAU '/my-bookings' để Express không nhầm 'my-bookings' là :id
 router.post('/', authMiddleware, bookingController.createBooking);
 
 module.exports = router;
