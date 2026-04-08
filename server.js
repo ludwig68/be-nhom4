@@ -19,8 +19,10 @@
  * =============================================================
  */
 
-// Nạp biến môi trường từ file .env vào process.env
-require('dotenv').config();
+// Nạp biến môi trường từ file:
+// - local: .env hoặc .env.local
+// - production/cPanel: .env.production hoặc ENV_FILE được chỉ định
+require('./src/utils/load-env')();
 
 // Import các hàm kiểm tra biến môi trường bắt buộc
 const { REQUIRED_ENV_KEYS, validateRequiredEnv } = require('./src/utils/env');
@@ -40,8 +42,23 @@ const app = require('./src/app');
 
 // Lấy port từ biến môi trường, mặc định 3000 nếu không có
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.IP || '0.0.0.0';
+
+process.on('unhandledRejection', (error) => {
+  console.error('UNHANDLED REJECTION:', error);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('UNCAUGHT EXCEPTION:', error);
+  process.exit(1);
+});
 
 // Khởi động server: lắng nghe kết nối HTTP trên cổng PORT
-app.listen(PORT, () => {
-  console.log(`Backend chạy tại port ${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+  console.log(`Backend chạy tại ${HOST}:${PORT}`);
+});
+
+server.on('error', (error) => {
+  console.error('SERVER LISTEN ERROR:', error);
+  process.exit(1);
 });

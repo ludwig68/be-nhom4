@@ -30,14 +30,21 @@ const feedbackRoutes = require('./routes/feedback.routes'); // Đánh giá
 // Khởi tạo ứng dụng Express
 const app = express();
 
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 // =============================================================
 // CẤU HÌNH MIDDLEWARE TOÀN CỤC
 // =============================================================
 
-// Cấu hình CORS: cho phép tất cả origin gọi API
-// origin: '*' nghĩa là chấp nhận mọi domain/port (chỉ nên dùng khi dev)
-// Production: nên thay '*' bằng URL frontend cụ thể, vd: 'http://localhost:5173'
-app.use(cors({ origin: '*' }));
+// Cấu hình CORS:
+// - Nếu có CORS_ALLOWED_ORIGINS thì chỉ cho phép các domain trong danh sách
+// - Nếu không khai báo thì cho phép mọi origin (thuận tiện cho local/dev)
+app.use(cors({
+  origin: allowedOrigins.length ? allowedOrigins : '*'
+}));
 
 // Middleware parse request body dạng JSON
 // Khi client gửi POST/PUT với header 'Content-Type: application/json'

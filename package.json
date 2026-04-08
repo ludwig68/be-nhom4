@@ -2,9 +2,15 @@
   "name": "backend-api",
   "version": "1.0.0",
   "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server.js",
     "env:check": "node scripts/env-check.js",
+    "db:check": "node scripts/db-check.js",
+    "boot:check": "node scripts/boot-check.js",
+    "prepare:cpanel": "node scripts/prepare-cpanel.js",
     "db:schema": "node scripts/read-db-schema.js",
     "db:seed:mock": "node scripts/seed-mock-data.js",
     "test": "jest --runInBand",
@@ -17,7 +23,7 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.20.0",
-    "uuid": "^13.0.0"
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "jest": "^29.7.0"

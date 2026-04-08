@@ -19,7 +19,6 @@
  * Danh sách các biến môi trường BẮT BUỘC phải có trong file .env
  * 
  * Giải thích từng biến:
- * - PORT: Cổng chạy server (vd: 3000)
  * - DB_HOST: Địa chỉ máy chủ MySQL (vd: localhost)
  * - DB_PORT: Cổng MySQL (vd: 3306)
  * - DB_USER: Username đăng nhập MySQL (vd: root)
@@ -31,7 +30,6 @@
  * Không bao giờ commit JWT_SECRET lên Git
  */
 const REQUIRED_ENV_KEYS = [
-  'PORT',
   'DB_HOST',
   'DB_PORT',
   'DB_USER',
