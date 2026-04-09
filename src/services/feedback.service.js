@@ -19,6 +19,31 @@
 const pool = require('../config/db');
 
 /**
+ * Parse giá trị ngày/giờ từ DB thành Date hợp lệ
+ */
+const toValidDate = (value) => {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+/**
+ * Format ngày local YYYY-MM-DD (tránh lệch ngày do UTC)
+ */
+const pad2 = (value) => String(value).padStart(2, '0');
+
+const formatDateLocal = (value) => {
+  const date = toValidDate(value);
+  if (!date) return null;
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+};
+
+/**
  * Kiểm tra xem user có thể đánh giá booking này không
  * 
  * @param {string} bookingId - ID booking
@@ -158,8 +183,8 @@ const getUserFeedbacks = async (userId) => {
     branchName: row.branchName,
     roomType: row.roomType,
     roomNumber: row.roomNumber,
-    checkIn: row.checkInDate ? new Date(row.checkInDate).toISOString().slice(0, 10) : null,
-    checkOut: row.checkOutDate ? new Date(row.checkOutDate).toISOString().slice(0, 10) : null,
+    checkIn: formatDateLocal(row.checkInDate),
+    checkOut: formatDateLocal(row.checkOutDate),
     createdAt: row.createdAt
   }));
 };
@@ -237,8 +262,8 @@ const getFeedbackDetail = async (feedbackId, userId) => {
     roomType: row.roomType,
     roomNumber: row.roomNumber,
     customerName: row.customerName,
-    checkIn: row.checkInDate ? new Date(row.checkInDate).toISOString().slice(0, 10) : null,
-    checkOut: row.checkOutDate ? new Date(row.checkOutDate).toISOString().slice(0, 10) : null,
+    checkIn: formatDateLocal(row.checkInDate),
+    checkOut: formatDateLocal(row.checkOutDate),
     createdAt: row.createdAt
   };
 };
@@ -282,8 +307,8 @@ const getEligibleBookingsForReview = async (userId) => {
     branchName: row.branchName,
     roomType: row.roomType,
     roomNumber: row.roomNumber,
-    checkIn: row.checkInDate ? new Date(row.checkInDate).toISOString().slice(0, 10) : null,
-    checkOut: row.checkOutDate ? new Date(row.checkOutDate).toISOString().slice(0, 10) : null
+    checkIn: formatDateLocal(row.checkInDate),
+    checkOut: formatDateLocal(row.checkOutDate)
   }));
 };
 
