@@ -52,6 +52,20 @@ const createFeedback = async (req, res) => {
 };
 
 /**
+ * API: DANH SÁCH ĐÁNH GIÁ PUBLIC
+ * GET /api/feedbacks/public
+ */
+const getPublicFeedbacks = async (req, res) => {
+  try {
+    const limit = req.query.limit || 6;
+    const feedbacks = await feedbackService.getPublicFeedbacks({ limit });
+    return successResponse(res, 'Lấy danh sách đánh giá public thành công', feedbacks);
+  } catch (error) {
+    return errorResponse(res, error.message || 'Lỗi lấy đánh giá public', error.errors || [], error.status || 500);
+  }
+};
+
+/**
  * API: DANH SÁCH ĐÁNH GIÁ CỦA USER
  * GET /api/feedbacks/my-feedbacks
  */
@@ -161,6 +175,7 @@ const deleteFeedback = async (req, res) => {
 
 module.exports = {
   createFeedback,
+  getPublicFeedbacks,
   getMyFeedbacks,
   getEligibleBookings,
   getFeedbackDetail,

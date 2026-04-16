@@ -94,6 +94,7 @@ app.get('/', (req, res) => {
         'POST /api/bookings/:id/check-out',
         // Feedback endpoints
         'POST /api/feedbacks',
+        'GET /api/feedbacks/public',
         'GET /api/feedbacks/my-feedbacks',
         'GET /api/feedbacks/eligible',
         'GET /api/feedbacks/:id',

@@ -144,6 +144,57 @@ const createFeedback = async ({ bookingId, userId, rating, comment }) => {
 };
 
 /**
+ * Lấy danh sách đánh giá public để hiển thị ngoài trang chủ
+ *
+ * @param {object} params
+ *   - limit: số lượng feedback muốn lấy
+ * @returns {object[]} Mảng feedback công khai
+ */
+const getPublicFeedbacks = async ({ limit = 6 } = {}) => {
+  const parsedLimit = Number(limit);
+  const safeLimit = Number.isInteger(parsedLimit)
+    ? Math.min(Math.max(parsedLimit, 1), 12)
+    : 6;
+
+  const [rows] = await pool.query(
+    `
+      SELECT
+        f.feedback_id AS feedbackId,
+        f.rating AS rating,
+        f.comment AS comment,
+        f.created_at AS createdAt,
+        u.full_name AS customerName,
+        bk.booking_code AS bookingCode,
+        b.branch_name AS branchName,
+        rt.type_name AS roomType,
+        r.room_number AS roomNumber
+      FROM feedbacks f
+      INNER JOIN bookings bk ON bk.booking_id = f.booking_id
+      LEFT JOIN users u ON u.user_id = f.customer_id
+      LEFT JOIN branches b ON b.branch_id = bk.branch_id
+      LEFT JOIN room_types rt ON rt.type_id = bk.type_room
+      LEFT JOIN booking_details bd ON bd.booking_id = bk.booking_id
+      LEFT JOIN rooms r ON r.room_id = bd.room_id
+      ORDER BY f.created_at DESC
+      LIMIT ?
+    `,
+    [safeLimit]
+  );
+
+  return rows.map((row) => ({
+    feedbackId: row.feedbackId,
+    rating: Number(row.rating || 0),
+    comment: row.comment || '',
+    customerName: row.customerName || 'Khách hàng',
+    bookingCode: row.bookingCode || '',
+    branchName: row.branchName || '',
+    roomType: row.roomType || '',
+    roomNumber: row.roomNumber || '',
+    createdAt: row.createdAt
+  }));
+};
+
+/**
  * Lấy danh sách đánh giá của user
  * 
  * @param {string} userId - ID user
@@ -374,6 +425,7 @@ const deleteFeedback = async ({ feedbackId, userId, userRole }) => {
 
 module.exports = {
   createFeedback,
+  getPublicFeedbacks,
   getUserFeedbacks,
   getFeedbackDetail,
   getEligibleBookingsForReview,
