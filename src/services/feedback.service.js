@@ -372,11 +372,57 @@ const deleteFeedback = async ({ feedbackId, userId, userRole }) => {
   return { feedbackId, message: 'Xóa đánh giá thành công' };
 };
 
+/**
+ * Lấy danh sách đánh giá công khai (hiển thị trang chủ)
+ * 
+ * @param {object} params - { limit }
+ * @returns {object[]}
+ */
+const getPublicFeedbacks = async ({ limit = 6 }) => {
+  const [rows] = await pool.query(
+    `
+      SELECT
+        f.feedback_id AS feedbackId,
+        f.rating,
+        f.comment,
+        f.created_at AS createdAt,
+        bk.booking_code AS bookingCode,
+        b.branch_name AS branchName,
+        rt.type_name AS roomType,
+        r.room_number AS roomNumber,
+        u.full_name AS customerName
+      FROM feedbacks f
+      INNER JOIN bookings bk ON bk.booking_id = f.booking_id
+      LEFT JOIN branches b ON b.branch_id = bk.branch_id
+      LEFT JOIN room_types rt ON rt.type_id = bk.type_room
+      LEFT JOIN booking_details bd ON bd.booking_id = bk.booking_id
+      LEFT JOIN rooms r ON r.room_id = bd.room_id
+      LEFT JOIN users u ON u.user_id = f.customer_id
+      ORDER BY f.created_at DESC
+      LIMIT ?
+    `,
+    [Number(limit)]
+  );
+
+  return rows.map((row) => ({
+    feedbackId: row.feedbackId,
+    bookingCode: row.bookingCode,
+    rating: row.rating,
+    comment: row.comment,
+    customerName: row.customerName || 'Khách hàng',
+    branchName: row.branchName,
+    roomType: row.roomType,
+    roomNumber: row.roomNumber,
+    createdAt: row.createdAt
+  }));
+};
+
 module.exports = {
   createFeedback,
   getUserFeedbacks,
   getFeedbackDetail,
   getEligibleBookingsForReview,
   updateFeedback,
-  deleteFeedback
+  deleteFeedback,
+  getPublicFeedbacks
 };

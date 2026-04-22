@@ -477,7 +477,7 @@ const createBooking = async ({ payload, userId }) => {
     const [bookingResult] = await connection.query(
       `
         INSERT INTO bookings
-        (booking_code, customer_id, staff_confirm, type_room, branch_id, check_in_date, check_out_date, prica_at_booking, status, note)
+        (booking_code, customer_id, staff_confirm, type_room, branch_id, check_in_date, check_out_date, price_at_booking, status, note)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
@@ -578,7 +578,7 @@ const getBookingList = async ({ userId, status = null }) => {
         bk.check_out_date AS checkOutDate,
         bk.actual_check_in AS actualCheckIn,
         bk.actual_check_out AS actualCheckOut,
-        bk.prica_at_booking AS totalPrice,
+        bk.price_at_booking AS totalPrice,
         bk.note AS note,
         bk.created_at AS createdAt,
         b.branch_id AS branchId,
@@ -731,7 +731,7 @@ const getBookingDetail = async (bookingIdentifier, userId, userRole) => {
         bk.check_out_date AS checkOutDate,
         bk.actual_check_in AS actualCheckIn,
         bk.actual_check_out AS actualCheckOut,
-        bk.prica_at_booking AS totalPrice,
+        bk.price_at_booking AS totalPrice,
         bk.note AS note,
         bk.created_at AS createdAt,
         b.branch_id AS branchId,
@@ -967,7 +967,7 @@ const confirmBooking = async ({ bookingId, staffUserId }) => {
         status,
         check_in_date AS checkInDate,
         check_out_date AS checkOutDate,
-        prica_at_booking AS totalPrice,
+        price_at_booking AS totalPrice,
         branch_id AS branchId
       FROM bookings
       WHERE booking_id = ?

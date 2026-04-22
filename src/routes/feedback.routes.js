@@ -16,6 +16,13 @@ const authMiddleware = require('../middlewares/auth.middleware');
 const router = express.Router();
 
 // =============================================================
+// ROUTES PUBLIC
+// =============================================================
+
+// GET /api/feedbacks/public  →  Danh sách đánh giá cho trang chủ
+router.get('/public', feedbackController.getPublicFeedbacks);
+
+// =============================================================
 // ROUTES PRIVATE (cần đăng nhập)
 // =============================================================
 

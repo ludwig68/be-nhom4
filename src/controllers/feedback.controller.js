@@ -159,11 +159,26 @@ const deleteFeedback = async (req, res) => {
   }
 };
 
+/**
+ * API: DANH SÁCH ĐÁNH GIÁ CÔNG KHAI
+ * GET /api/feedbacks/public
+ */
+const getPublicFeedbacks = async (req, res) => {
+  try {
+    const limit = Number(req.query.limit) || 6;
+    const feedbacks = await feedbackService.getPublicFeedbacks({ limit });
+    return successResponse(res, 'Lấy danh sách đánh giá công khai thành công', feedbacks);
+  } catch (error) {
+    return errorResponse(res, error.message || 'Lỗi lấy đánh giá', error.errors || [], error.status || 500);
+  }
+};
+
 module.exports = {
   createFeedback,
   getMyFeedbacks,
   getEligibleBookings,
   getFeedbackDetail,
   updateFeedback,
-  deleteFeedback
+  deleteFeedback,
+  getPublicFeedbacks
 };

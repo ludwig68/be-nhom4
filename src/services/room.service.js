@@ -293,7 +293,9 @@ const getAllRooms = async (filters = {}) => {
     images: imagesMap.get(Number(room.typeId)) || [],
     // isAvailable: true nếu có checkIn/checkOut (đã lọc ở query)
     // hoặc status = 'trống' nếu không có filter thời gian
-    isAvailable: filters.checkIn && filters.checkOut ? true : room.status === 'trống'
+    isAvailable: filters.checkIn && filters.checkOut 
+      ? room.status !== 'bảo trì' 
+      : room.status === 'trống'
   }));
 };
 
