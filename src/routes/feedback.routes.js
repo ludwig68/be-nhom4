@@ -5,7 +5,16 @@
  * 
  * PREFIX: /api/feedbacks
  * 
- * TẤT CẢ ĐỀU CẦN ĐĂNG NHẬP (authMiddleware)
+ * API PUBLIC:
+ * - GET /api/feedbacks/public          → Danh sách đánh giá public
+ *
+ * API PRIVATE:
+ * - POST /api/feedbacks                → Gửi đánh giá
+ * - GET /api/feedbacks/my-feedbacks    → Lịch sử đánh giá của user
+ * - GET /api/feedbacks/eligible        → Booking đủ điều kiện đánh giá
+ * - GET /api/feedbacks/:id             → Chi tiết đánh giá
+ * - PUT /api/feedbacks/:id             → Sửa đánh giá
+ * - DELETE /api/feedbacks/:id          → Xóa đánh giá
  * =============================================================
  */
 
@@ -14,6 +23,9 @@ const feedbackController = require('../controllers/feedback.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 
 const router = express.Router();
+
+// GET /api/feedbacks/public  →  Danh sách đánh giá public
+router.get('/public', feedbackController.getPublicFeedbacks);
 
 // =============================================================
 // ROUTES PUBLIC
